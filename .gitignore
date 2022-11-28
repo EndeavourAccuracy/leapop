@@ -1,0 +1,11 @@
+# Executables.
+/leapop
+/leapop.exe
+
+# Created by IDE's.
+/leapop.dev
+/leapop.ico
+/leapop.layout
+/leapop.o
+/*private*
+/Makefile.win

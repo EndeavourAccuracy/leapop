@@ -1,0 +1,10 @@
+v0.9b (April 1, 2018) - Norbert de Jonge
+--------------------
++ The program can now also edit PoP1 for BBC Master levels!
++ Guard sprite (levels 3-13) and environment type (levels 3-14) modifiable.
++ In addition to the adamgreen (A0) Apple II disk image, now also detects peterferrie (A1).
+* Improved Sprinkle().
+
+v0.8 (April 2, 2017) - Norbert de Jonge
+--------------------
++ Initial release.
