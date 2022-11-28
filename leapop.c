@@ -1,5 +1,6 @@
-/* leapop v0.9b (April 2018)
- * Copyright (C) 2017, 2018 Norbert de Jonge <mail@norbertdejonge.nl>
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* leapop v1.0 (November 2022)
+ * Copyright (C) 2017-2022 Norbert de Jonge <nlmdejonge@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -55,8 +56,8 @@
 #define EXIT_NORMAL 0
 #define EXIT_ERROR 1
 #define EDITOR_NAME "leapop"
-#define EDITOR_VERSION "v0.9b (April 2018)"
-#define COPYRIGHT "Copyright (C) 2018 Norbert de Jonge"
+#define EDITOR_VERSION "v1.0 (November 2022)"
+#define COPYRIGHT "Copyright (C) 2022 Norbert de Jonge"
 #define LEVEL_SIZE 2304
 #define LEVELS 15
 #define ROOMS 24
@@ -66,10 +67,12 @@
 #define BACKUP_A DISK_DIR_A SLASH "disk.bak"
 #define DISK_DIR_B "disk_bbcmaster"
 #define BACKUP_B DISK_DIR_B SLASH "disk.bak"
+#define DISK_DIR_C "disk_c64"
+#define BACKUP_C DISK_DIR_C SLASH "disk.bak"
 #define MAX_PATHFILE 200
 #define MAX_TOWRITE 720
-#define SCREEN_WIDTH 560 + 2 + 50 /*** 612 ***/
-#define SCREEN_HEIGHT 384 + 2 + 75 /*** 461 ***/
+#define WINDOW_WIDTH 560 + 2 + 50 /*** 612 ***/
+#define WINDOW_HEIGHT 384 + 2 + 75 /*** 461 ***/
 #define MAX_IMG 200
 #define MAX_CON 30
 #define REFRESH_PROG 25 /*** That is 40 fps (1000/25). ***/
@@ -103,11 +106,23 @@
 #define A1_POP_OFFSET_1 0x405
 #define A1_POP_OFFSET_2 0x47A
 #define A1_POP_TEXT "PRINCEUNP"
-/*** BBC Master: kieranhj (B0) ***/
+/*** BBC Master: kieranhj 1.0 (B0) ***/
 #define B0_POPBBCM_OFFSET 0
 #define B0_POPBBCM_TEXT "POP BEEB"
 #define B0_VANDB_OFFSET 0x26F0
+/*** v1.0 2018-03-29 22:00 kc ***/
 #define B0_VANDB_TEXT "\x10\x18\x03\x29\x22\x00\x6B\x63"
+/*** BBC Master: kieranhj 1.1 (B1) ***/
+#define B1_POPBBCM_OFFSET 0
+#define B1_POPBBCM_TEXT "POP BEEB"
+#define B1_VANDB_OFFSET 0x26F0
+/*** v1.1 2018-04-01 20:35 kc ***/
+#define B1_VANDB_TEXT "\x11\x18\x04\x01\x20\x35\x6B\x63"
+/*** C64: mrsid (C0) ***/
+#define C0_C64CART_OFFSET 0x00
+#define C0_C64CART_TEXT "C64 CARTRIDGE"
+#define C0_DATE_OFFSET 0x688C1
+#define C0_DATE_TEXT "05/11/2011"
 
 #define BROKEN_ROOM_X 355
 #define BROKEN_ROOM_Y 79
@@ -168,6 +183,7 @@ unsigned char arLevel[LEVEL_SIZE + 2];
 int iLevelRead;
 char sPathFileA[MAX_PATHFILE + 2];
 char sPathFileB[MAX_PATHFILE + 2];
+char sPathFileC[MAX_PATHFILE + 2];
 char sPathFile[MAX_PATHFILE + 2];
 int iChanged;
 int iScreen;
@@ -237,10 +253,13 @@ int iEventHover;
 int iHomeComputer;
 int iDiskImageA;
 int iDiskImageB;
+int iDiskImageC;
 int iAppleII;
 int iOnAppleII;
 int iBBCMaster;
 int iOnBBCMaster;
+int iC64;
+int iOnC64;
 int iHomeComputerActive;
 int iModified;
 
@@ -267,7 +286,8 @@ static const int arDefaultEnv2[TABS_LEVEL] = { 0x00, 0x00, 0x00, 0x00, 0x01, 0x0
 
 /* The following offsets are for:
  * ...A[] = { adamgreen (A0), peterferrie (A1) }
- * ...B[] = { kieranhj (B0) }
+ * ...B[] = { kieranhj 1.0 (B0), kieranhj 1.1 (B1) }
+ * ...C[] = { mrsid (C0) }
  * 0x00 = unused
  */
 static const unsigned long arLevelOffsetsA[][15] = /*** 0 - 14 ***/
@@ -325,24 +345,75 @@ static const unsigned long arLevelOffsetsB[][15] = /*** 0 - 14 ***/
 		0x24200 + (12 * 0xA00),
 		0x24200 + (13 * 0xA00),
 		0x24200 + (14 * 0xA00)
+	},
+	{
+		0x24200 + (0 * 0xA00),
+		0x24200 + (1 * 0xA00),
+		0x24200 + (2 * 0xA00),
+		0x24200 + (3 * 0xA00),
+		0x24200 + (4 * 0xA00),
+		0x24200 + (5 * 0xA00),
+		0x24200 + (6 * 0xA00),
+		0x24200 + (7 * 0xA00),
+		0x24200 + (8 * 0xA00),
+		0x24200 + (9 * 0xA00),
+		0x24200 + (10 * 0xA00),
+		0x24200 + (11 * 0xA00),
+		0x24200 + (12 * 0xA00),
+		0x24200 + (13 * 0xA00),
+		0x24200 + (14 * 0xA00)
 	}
 };
+static const unsigned long arLevelOffsetsC[][15] = /*** 0 - 14 ***/
+{
+	{
+		0x00,
+		0x100D0,
+		0x109D0,
+		0x112D0,
+		0x140F0,
+		0x149F0,
+		0x152F0,
+		0x18110,
+		0x18A10,
+		0x19310,
+		0x1C130,
+		0x1CA30,
+		0x1D330,
+		0x20150,
+		0x20A50
+	}
+};
+/* In theory, ulStartLevelA for A1 could be set to 0x7343, but this only
+ * seems to work for level 2. Perhaps because of packing. Additionally,
+ * 0x731A might skip the intro. And the ProDOS info, by changing 9D to BD at
+ * 0x1638, 0x1643, 0x164E, 0x1659.
+ */
 static const unsigned long ulSkipIntroA[] = { 0x00, 0x00 };
-static const unsigned long ulSkipIntroB[] = { 0x428 };
+static const unsigned long ulSkipIntroB[] = { 0x428, 0x428 };
+static const unsigned long ulSkipIntroC[] = { 0x00 };
 static const unsigned long ulStartLevelA[] = { 0x00, 0x00 };
-static const unsigned long ulStartLevelB[] = { 0x12F9 };
+static const unsigned long ulStartLevelB[] = { 0x12F9, 0x12F9 };
+static const unsigned long ulStartLevelC[] = { 0x00 };
 static const unsigned long ulSavedLevelA[] = { 0x43600, 0x00 };
-static const unsigned long ulSavedLevelB[] = { 0x00 };
+static const unsigned long ulSavedLevelB[] = { 0x00, 0x00 };
+static const unsigned long ulSavedLevelC[] = { 0x00 };
+/*** A5 7C 30 04 A9 40 85 7D ***/
 static const unsigned long ulCopyProtA[] = { 0x19497, 0x1BA97 };
-static const unsigned long ulCopyProtB[] = { 0x00 };
+static const unsigned long ulCopyProtB[] = { 0x00, 0x00 };
+static const unsigned long ulCopyProtC[] = { 0x00 };
 static const unsigned long ulPrinceHPA[] = { 0x7258, 0xA058 };
-static const unsigned long ulPrinceHPB[] = { 0x14CB };
+static const unsigned long ulPrinceHPB[] = { 0x14CB, 0x14CB };
+static const unsigned long ulPrinceHPC[] = { 0x00 }; /*** Inaccessible. ***/
 static const unsigned long ulShadowHPA[] = { 0x15F44, 0x18B44 };
-static const unsigned long ulShadowHPB[] = { 0x00 };
+static const unsigned long ulShadowHPB[] = { 0x00, 0x00 };
+static const unsigned long ulShadowHPC[] = { 0x00 };
 static const unsigned long ulChomperDelayA[] = { 0x19E9A, 0x1C29A };
-static const unsigned long ulChomperDelayB[] = { 0x00 };
+static const unsigned long ulChomperDelayB[] = { 0x00, 0x00 };
+static const unsigned long ulChomperDelayC[] = { 0x00 };
 static const unsigned long ulMouseDelayA[] = { 0x79B8, 0xA7BB };
-static const unsigned long ulMouseDelayB[] = { 0x00 };
+static const unsigned long ulMouseDelayB[] = { 0x00, 0x00 };
+static const unsigned long ulMouseDelayC[] = { 0x00 };
 /***
 Defaults, as used in arDefaultGuard[][]:
 4B 64 4B 4B 4B 32 64 DC 00 3C 28 3C strike prob.
@@ -388,23 +459,51 @@ static const unsigned long ulGuardB[][TABS_GUARD] =
 		0x00,
 		0x00,
 		0x00
+	},
+	{
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00
+	}
+};
+static const unsigned long ulGuardC[][TABS_GUARD] =
+{
+	{
+		0xEC42,
+		0xEC4E,
+		0xEC5A,
+		0xEC66,
+		0xEC72,
+		0xEC7E,
+		0xEC8A,
+		0xEC96
 	}
 };
 /*** 04 03 03 03 03 04 05 04 04 05 05 05 04 06 (01) ***/
 static const unsigned long ulGuardHPA[] = { 0x15A7C, 0x1867C };
-static const unsigned long ulGuardHPB[] = { 0x00 };
+static const unsigned long ulGuardHPB[] = { 0x00, 0x00 };
+static const unsigned long ulGuardHPC[] = { 0xECA2 };
 /*** 01 00 00 00 01 01 01 00 00 00 01 01 00 00 (60) ***/
 static const unsigned long ulGuardUniformA[] = { 0x15A8A, 0x1868A };
-static const unsigned long ulGuardUniformB[] = { 0x00 };
+static const unsigned long ulGuardUniformB[] = { 0x00, 0x00 };
+static const unsigned long ulGuardUniformC[] = { 0x00 };
 /*** 00 00 00 01 02 02 03 02 02 02 02 02 04 05 (05) ***/
 static const unsigned long ulGuardSpriteA[] = { 0x1A8D5, 0x1CCD5 };
-static const unsigned long ulGuardSpriteB[] = { 0x114A };
+static const unsigned long ulGuardSpriteB[] = { 0x114A, 0x114A };
+static const unsigned long ulGuardSpriteC[] = { 0x00 };
 /*** 00 00 00 00 01 01 01 02 02 02 01 01 02 02 01 ***/
 static const unsigned long ulEnv1A[] = { 0x1A8B7, 0x1CCB7 };
-static const unsigned long ulEnv1B[] = { 0x00 };
+static const unsigned long ulEnv1B[] = { 0x00, 0x00 };
+static const unsigned long ulEnv1C[] = { 0x00 };
 /*** 00 00 00 00 01 01 01 02 02 02 01 01 02 02 01 ***/
 static const unsigned long ulEnv2A[] = { 0x1A8C6, 0x1CCC6 };
-static const unsigned long ulEnv2B[] = { 0x00 };
+static const unsigned long ulEnv2B[] = { 0x00, 0x00 };
+static const unsigned long ulEnv2C[] = { 0x00 };
 
 int iEXEGuard[TABS_GUARD + 2][12 + 2];
 int iEXEGuardHP[TABS_LEVEL + 2];
@@ -496,7 +595,7 @@ SDL_Texture *imgnexton_0;
 SDL_Texture *imgnexton_1;
 SDL_Texture *imgprevoff;
 SDL_Texture *imgnextoff;
-SDL_Texture *imgbara, *imgbarb;
+SDL_Texture *imgbara, *imgbarb, *imgbarc;
 SDL_Texture *imgextras[10 + 2];
 SDL_Texture *imgroomson_0;
 SDL_Texture *imgroomson_1;
@@ -557,6 +656,7 @@ SDL_Texture *imgeventh;
 SDL_Texture *imghc;
 SDL_Texture *imghcadis, *imghcaoff, *imghcaon, *imghcalb;
 SDL_Texture *imghcbdis, *imghcboff, *imghcbon, *imghcblb;
+SDL_Texture *imghccdis, *imghccoff, *imghccon, *imghcclb;
 
 struct sample {
 	Uint8 *data;
@@ -567,6 +667,7 @@ struct sample {
 void ShowUsage (void);
 int GetPathFileA (void);
 int GetPathFileB (void);
+int GetPathFileC (void);
 void LoadLevels (int iAtLevel);
 void SaveLevels (void);
 void PrintTileName (int iLevel, int iRoom, int iTile, int iTileValue);
@@ -754,6 +855,11 @@ int main (int argc, char *argv[])
 			{
 				iHomeComputer = 2;
 			}
+			else if ((strcmp (argv[iArgLoop], "-c") == 0) ||
+				(strcmp (argv[iArgLoop], "--c64") == 0))
+			{
+				iHomeComputer = 3;
+			}
 			else
 			{
 				ShowUsage();
@@ -763,6 +869,7 @@ int main (int argc, char *argv[])
 
 	iAppleII = GetPathFileA();
 	iBBCMaster = GetPathFileB();
+	iC64 = GetPathFileC();
 
 	srand ((unsigned)time(&tm));
 
@@ -799,6 +906,7 @@ void ShowUsage (void)
 	printf ("  -k,        --keyboard       do not use a game controller\n");
 	printf ("  -a,        --appleii        edit Apple II levels\n");
 	printf ("  -b,        --bbcmaster      edit BBC Master levels\n");
+	printf ("  -c,        --c64            edit C64 levels\n");
 	printf ("\n");
 	exit (EXIT_NORMAL);
 }
@@ -986,7 +1094,7 @@ int GetPathFileB (void)
 		return (0);
 	}
 
-	/*** Which disk image: kieranhj (B0)? ***/
+	/*** Which disk image: kieranhj 1.0 (B0) or kieranhj 1.1 (B1)? ***/
 	iDiskImageB = -1;
 	iFd = open (sPathFileB, O_RDONLY|O_BINARY);
 	if (iFd == -1)
@@ -995,7 +1103,7 @@ int GetPathFileB (void)
 			sPathFileB, strerror (errno));
 		return (0);
 	}
-	/*** B0 version (kieranhj) ***/
+	/*** B0 version (kieranhj 1.0) ***/
 	if (iDiskImageB == -1)
 	{
 		iVerify[1] = Verify (iFd, B0_POPBBCM_OFFSET, B0_POPBBCM_TEXT);
@@ -1003,7 +1111,18 @@ int GetPathFileB (void)
 		if ((iVerify[1] == 1) && (iVerify[2] == 1))
 		{
 			iDiskImageB = 0;
-			PrIfDe ("[ INFO ] kieranhj (B0)\n");
+			PrIfDe ("[ INFO ] kieranhj 1.0 (B0)\n");
+		}
+	}
+	/*** B1 version (kieranhj 1.1) ***/
+	if (iDiskImageB == -1)
+	{
+		iVerify[1] = Verify (iFd, B1_POPBBCM_OFFSET, B1_POPBBCM_TEXT);
+		iVerify[2] = Verify (iFd, B1_VANDB_OFFSET, B1_VANDB_TEXT);
+		if ((iVerify[1] == 1) && (iVerify[2] == 1))
+		{
+			iDiskImageB = 1;
+			PrIfDe ("[ INFO ] kieranhj 1.1 (B1)\n");
 		}
 	}
 	close (iFd);
@@ -1012,6 +1131,107 @@ int GetPathFileB (void)
 	{
 		snprintf (sWarning, MAX_WARNING, "File %s is not a PoP1 for BBC Master"
 			" disk image!", sPathFileB);
+		printf ("[ WARN ] %s\n", sWarning);
+		SDL_ShowSimpleMessageBox (SDL_MESSAGEBOX_ERROR,
+			"Warning", sWarning, NULL);
+		return (0);
+	} else {
+		return (1);
+	}
+}
+/*****************************************************************************/
+int GetPathFileC (void)
+/*****************************************************************************/
+{
+	int iFound;
+	DIR *dDir;
+	struct dirent *stDirent;
+	char sExtension[100 + 2];
+	char sWarning[MAX_WARNING + 2];
+	int iFd;
+	int iVerify[10 + 2];
+
+	iFound = 0;
+
+	dDir = opendir (DISK_DIR_C);
+	if (dDir == NULL)
+	{
+		printf ("[ WARN ] Cannot open directory \"%s\": %s!\n",
+			DISK_DIR_C, strerror (errno));
+		return (0);
+	}
+
+	while ((stDirent = readdir (dDir)) != NULL)
+	{
+		if (iFound == 0)
+		{
+			if ((strcmp (stDirent->d_name, ".") != 0) &&
+				(strcmp (stDirent->d_name, "..") != 0))
+			{
+				snprintf (sExtension, 100, "%s", strrchr (stDirent->d_name, '.'));
+				if ((toupper (sExtension[1]) == 'C') &&
+					(toupper (sExtension[2]) == 'R') &&
+					(toupper (sExtension[3]) == 'T'))
+				{
+					iFound = 1;
+					snprintf (sPathFileC, MAX_PATHFILE, "%s%s%s", DISK_DIR_C, SLASH,
+						stDirent->d_name);
+					if (iDebug == 1)
+					{
+						printf ("[  OK  ] Found C64 disk image \"%s\".\n",
+							sPathFileC);
+					}
+				}
+			}
+		}
+	}
+
+	closedir (dDir);
+
+	if (iFound == 0)
+	{
+		snprintf (sWarning, MAX_WARNING, "Cannot find a .crt disk image in"
+			" directory \"%s\"!", DISK_DIR_C);
+		printf ("[ WARN ] %s\n", sWarning);
+		SDL_ShowSimpleMessageBox (SDL_MESSAGEBOX_ERROR,
+			"Warning", sWarning, NULL);
+		return (0);
+	}
+
+	/*** Is the file accessible? ***/
+	if (access (sPathFileC, R_OK|W_OK) == -1)
+	{
+		printf ("[ WARN ] Cannot access \"%s\": %s!\n",
+			sPathFileC, strerror (errno));
+		return (0);
+	}
+
+	/*** Which disk image: mrsid (C0)? ***/
+	iDiskImageC = -1;
+	iFd = open (sPathFileC, O_RDONLY|O_BINARY);
+	if (iFd == -1)
+	{
+		printf ("[ WARN ] Could not open \"%s\": %s!\n",
+			sPathFileC, strerror (errno));
+		return (0);
+	}
+	/*** C0 version (mrsid) ***/
+	if (iDiskImageC == -1)
+	{
+		iVerify[1] = Verify (iFd, C0_C64CART_OFFSET, C0_C64CART_TEXT);
+		iVerify[2] = Verify (iFd, C0_DATE_OFFSET, C0_DATE_TEXT);
+		if ((iVerify[1] == 1) && (iVerify[2] == 1))
+		{
+			iDiskImageC = 0;
+			PrIfDe ("[ INFO ] mrsid (C0)\n");
+		}
+	}
+	close (iFd);
+
+	if (iDiskImageC == -1)
+	{
+		snprintf (sWarning, MAX_WARNING, "File %s is not a PoP1 for C64"
+			" disk image!", sPathFileC);
 		printf ("[ WARN ] %s\n", sWarning);
 		SDL_ShowSimpleMessageBox (SDL_MESSAGEBOX_ERROR,
 			"Warning", sWarning, NULL);
@@ -1076,6 +1296,9 @@ void LoadLevels (int iAtLevel)
 				break;
 			case 2:
 				iOffsetStart = arLevelOffsetsB[iDiskImageB][iLevelLoop - 1];
+				break;
+			case 3:
+				iOffsetStart = arLevelOffsetsC[iDiskImageC][iLevelLoop - 1];
 				break;
 			default: printf ("[FAILED] iHomeComputer!\n"); exit (EXIT_ERROR); break;
 		}
@@ -1382,6 +1605,9 @@ void SaveLevels (void)
 			case 2:
 				iOffsetStart = arLevelOffsetsB[iDiskImageB][iLevelLoop - 1];
 				break;
+			case 3:
+				iOffsetStart = arLevelOffsetsC[iDiskImageC][iLevelLoop - 1];
+				break;
 			default: printf ("[FAILED] iHomeComputer!\n"); exit (EXIT_ERROR); break;
 		}
 		lseek (iFd, iOffsetStart, SEEK_SET);
@@ -1395,15 +1621,20 @@ void SaveLevels (void)
 
 		cChecksum = ChecksumOrWrite (-1, iLevel);
 
-		ChecksumOrWrite (iFd, iLevel);
+		if ((iHomeComputer == 3) && (iLevel == 15))
+		{
+			/*** The C64 port has no demo level. ***/
+		} else {
+			ChecksumOrWrite (iFd, iLevel);
+		}
 	}
 
 	/*** Workaround for copy-protection. ***/
 	switch (iHomeComputer)
 	{
-		/*** A5 7C 30 04 A9 40 85 7D ***/
 		case 1: iOffsetStart = ulCopyProtA[iDiskImageA]; break;
 		case 2: iOffsetStart = ulCopyProtB[iDiskImageB]; break;
+		case 3: iOffsetStart = ulCopyProtC[iDiskImageC]; break;
 		default: printf ("[FAILED] iHomeComputer!\n"); exit (EXIT_ERROR); break;
 	}
 	if (iOffsetStart != 0x00)
@@ -1421,6 +1652,7 @@ void SaveLevels (void)
 	{
 		case 1: iOffsetStart = ulSavedLevelA[iDiskImageA]; break;
 		case 2: iOffsetStart = ulSavedLevelB[iDiskImageB]; break;
+		case 3: iOffsetStart = ulSavedLevelC[iDiskImageC]; break;
 		default: printf ("[FAILED] iHomeComputer!\n"); exit (EXIT_ERROR); break;
 	}
 	if (iOffsetStart != 0x00)
@@ -1697,7 +1929,7 @@ void InitScreen (void)
 
 	window = SDL_CreateWindow (EDITOR_NAME " " EDITOR_VERSION,
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		(SCREEN_WIDTH) * iScale, (SCREEN_HEIGHT) * iScale, iFullscreen);
+		(WINDOW_WIDTH) * iScale, (WINDOW_HEIGHT) * iScale, iFullscreen);
 	if (window == NULL)
 	{
 		printf ("[FAILED] Unable to create a window: %s!\n", SDL_GetError());
@@ -1713,8 +1945,8 @@ void InitScreen (void)
 	SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 	if (iFullscreen != 0)
 	{
-		SDL_RenderSetLogicalSize (ascreen, (SCREEN_WIDTH) * iScale,
-			(SCREEN_HEIGHT) * iScale);
+		SDL_RenderSetLogicalSize (ascreen, (WINDOW_WIDTH) * iScale,
+			(WINDOW_HEIGHT) * iScale);
 	}
 
 	if (TTF_Init() == -1)
@@ -1815,6 +2047,9 @@ void InitScreen (void)
 			PreLoad (PNG_VARIOUS, "BBC_Master_disabled.png", &imghcbdis);
 			PreLoad (PNG_VARIOUS, "BBC_Master_off.png", &imghcboff);
 			PreLoad (PNG_VARIOUS, "BBC_Master_on.png", &imghcbon);
+			PreLoad (PNG_VARIOUS, "C64_disabled.png", &imghccdis);
+			PreLoad (PNG_VARIOUS, "C64_off.png", &imghccoff);
+			PreLoad (PNG_VARIOUS, "C64_on.png", &imghccon);
 		} else {
 			PreLoad (PNG_GAMEPAD, "Apple_II_disabled.png", &imghcadis);
 			PreLoad (PNG_GAMEPAD, "Apple_II_off.png", &imghcaoff);
@@ -1822,6 +2057,9 @@ void InitScreen (void)
 			PreLoad (PNG_GAMEPAD, "BBC_Master_disabled.png", &imghcbdis);
 			PreLoad (PNG_GAMEPAD, "BBC_Master_off.png", &imghcboff);
 			PreLoad (PNG_GAMEPAD, "BBC_Master_on.png", &imghcbon);
+			PreLoad (PNG_GAMEPAD, "C64_disabled.png", &imghccdis);
+			PreLoad (PNG_GAMEPAD, "C64_off.png", &imghccoff);
+			PreLoad (PNG_GAMEPAD, "C64_on.png", &imghccon);
 		}
 		HomeComputer();
 		PlaySound ("wav/ok_close.wav");
@@ -1831,6 +2069,7 @@ void InitScreen (void)
 	{
 		case 1: snprintf (sPathFile, MAX_PATHFILE, "%s", sPathFileA); break;
 		case 2: snprintf (sPathFile, MAX_PATHFILE, "%s", sPathFileB); break;
+		case 3: snprintf (sPathFile, MAX_PATHFILE, "%s", sPathFileC); break;
 	}
 
 	LoadLevels (iStartLevel);
@@ -1975,11 +2214,23 @@ void InitScreen (void)
 		case 2:
 			switch (iDiskImageB)
 			{
-				case 0: /*** kieranhj (B0) ***/
+				case 0: /*** kieranhj 1.0 (B0) ***/
 					PreLoad (PNG_VARIOUS, "B-em_B0.png", &imgemulator);
+					break;
+				case 1: /*** kieranhj 1.1 (B1) ***/
+					PreLoad (PNG_VARIOUS, "B-em_B1.png", &imgemulator);
 					break;
 			}
 			PreLoad (PNG_VARIOUS, "BBC_Master_lb.png", &imghcblb);
+			break;
+		case 3:
+			switch (iDiskImageC)
+			{
+				case 0: /*** mrsid (C0) ***/
+					PreLoad (PNG_VARIOUS, "VICE_C0.png", &imgemulator);
+					break;
+			}
+			PreLoad (PNG_VARIOUS, "C64_lb.png", &imghcclb);
 			break;
 	}
 	PreLoad (PNG_VARIOUS, "exe_tab.png", &imgexetab);
@@ -1999,6 +2250,7 @@ void InitScreen (void)
 		PreLoad (PNG_VARIOUS, "events.png", &imgevents);
 		PreLoad (PNG_VARIOUS, "level_bar_a.png", &imgbara);
 		PreLoad (PNG_VARIOUS, "level_bar_b.png", &imgbarb);
+		PreLoad (PNG_VARIOUS, "level_bar_c.png", &imgbarc);
 		PreLoad (PNG_VARIOUS, "palace.png", &imgpalace);
 		PreLoad (PNG_VARIOUS, "popup.png", &imgpopup);
 		PreLoad (PNG_VARIOUS, "room_links.png", &imgrl);
@@ -2010,6 +2262,7 @@ void InitScreen (void)
 		PreLoad (PNG_GAMEPAD, "events.png", &imgevents);
 		PreLoad (PNG_GAMEPAD, "level_bar_a.png", &imgbara);
 		PreLoad (PNG_GAMEPAD, "level_bar_b.png", &imgbarb);
+		PreLoad (PNG_GAMEPAD, "level_bar_c.png", &imgbarc);
 		PreLoad (PNG_GAMEPAD, "palace.png", &imgpalace);
 		PreLoad (PNG_GAMEPAD, "popup.png", &imgpopup);
 		PreLoad (PNG_GAMEPAD, "room_links.png", &imgrl);
@@ -2229,7 +2482,7 @@ void InitScreen (void)
 									Quit(); break;
 								case 2:
 									arBrokenRoomLinks[iCurLevel] = BrokenRoomLinks (0);
-									/*** no break ***/
+									iScreen = 1; break;
 								case 3:
 									iScreen = 1; break;
 							}
@@ -2437,7 +2690,7 @@ void InitScreen (void)
 					}
 					ShowScreen();
 					break;
-				case SDL_KEYDOWN: /*** http://wiki.libsdl.org/SDL_Keycode ***/
+				case SDL_KEYDOWN: /*** https://wiki.libsdl.org/SDL2/SDL_Keycode ***/
 					switch (event.key.keysym.sym)
 					{
 						case SDLK_F1:
@@ -2507,7 +2760,7 @@ void InitScreen (void)
 									Quit(); break;
 								case 2:
 									arBrokenRoomLinks[iCurLevel] = BrokenRoomLinks (0);
-									/*** no break ***/
+									iScreen = 1; break;
 								case 3:
 									iScreen = 1; break;
 							}
@@ -3155,7 +3408,7 @@ void InitScreen (void)
 									Quit(); break;
 								case 2:
 									arBrokenRoomLinks[iCurLevel] = BrokenRoomLinks (0);
-									/*** no break ***/
+									iScreen = 1; break;
 								case 3:
 									iScreen = 1; break;
 							}
@@ -4378,6 +4631,7 @@ void ShowScreen (void)
 	{
 		case 1: ShowImage (imgbara, 25, 0, "imgbara"); break;
 		case 2: ShowImage (imgbarb, 25, 0, "imgbarb"); break;
+		case 3: ShowImage (imgbarc, 25, 0, "imgbarc"); break;
 	}
 
 	/*** Assemble level bar text. ***/
@@ -4419,6 +4673,7 @@ void ShowScreen (void)
 	{
 		case 1: ShowImage (imghcalb, 32, 7, "imghcalb"); break;
 		case 2: ShowImage (imghcblb, 32, 7, "imghcblb"); break;
+		case 3: ShowImage (imghcclb, 32, 7, "imghcclb"); break;
 	}
 
 	/*** Display level bar text. ***/
@@ -4599,7 +4854,7 @@ void Help (void)
 				case SDL_MOUSEMOTION:
 					iXPos = event.motion.x;
 					iYPos = event.motion.y;
-					if (InArea (54, 346, 54 + 504, 346 + 23) == 1)
+					if (InArea (48, 322, 48 + 517, 322 + 20) == 1)
 					{
 						SDL_SetCursor (curHand);
 					} else {
@@ -4622,8 +4877,8 @@ void Help (void)
 					{
 						if (InArea (510, 411, 510 + 85, 411 + 32) == 1) /*** OK ***/
 							{ iHelp = 0; }
-						if (InArea (54, 346, 54 + 504, 346 + 23) == 1)
-							{ OpenURL ("http://www.norbertdejonge.nl/leapop/"); }
+						if (InArea (48, 322, 48 + 517, 322 + 20) == 1)
+							{ OpenURL ("https://github.com/EndeavourAccuracy/leapop"); }
 					}
 					ShowHelp(); break;
 				case SDL_WINDOWEVENT:
@@ -4747,7 +5002,8 @@ void EXE (void)
 
 						/*** Prince HP. ***/
 						if (((iHomeComputer == 1) && (ulPrinceHPA[iDiskImageA] != 0x00)) ||
-							((iHomeComputer == 2) && (ulPrinceHPB[iDiskImageB] != 0x00)))
+							((iHomeComputer == 2) && (ulPrinceHPB[iDiskImageB] != 0x00)) ||
+							((iHomeComputer == 3) && (ulPrinceHPC[iDiskImageC] != 0x00)))
 						{
 							PlusMinus (&iEXEPrinceHP, 139, 58, 0, 255, -10, 0);
 							PlusMinus (&iEXEPrinceHP, 154, 58, 0, 255, -1, 0);
@@ -4757,7 +5013,8 @@ void EXE (void)
 
 						/*** Shadow HP. ***/
 						if (((iHomeComputer == 1) && (ulShadowHPA[iDiskImageA] != 0x00)) ||
-							((iHomeComputer == 2) && (ulShadowHPB[iDiskImageB] != 0x00)))
+							((iHomeComputer == 2) && (ulShadowHPB[iDiskImageB] != 0x00)) ||
+							((iHomeComputer == 3) && (ulShadowHPC[iDiskImageC] != 0x00)))
 						{
 							PlusMinus (&iEXEShadowHP, 139, 82, 0, 255, -10, 0);
 							PlusMinus (&iEXEShadowHP, 154, 82, 0, 255, -1, 0);
@@ -4769,7 +5026,9 @@ void EXE (void)
 						if (((iHomeComputer == 1) &&
 							(ulChomperDelayA[iDiskImageA] != 0x00)) ||
 							((iHomeComputer == 2) &&
-							(ulChomperDelayB[iDiskImageB] != 0x00)))
+							(ulChomperDelayB[iDiskImageB] != 0x00)) ||
+							((iHomeComputer == 3) &&
+							(ulChomperDelayC[iDiskImageC] != 0x00)))
 						{
 							PlusMinus (&iEXEChomperDelay, 139, 106, 3, 255, -10, 0);
 							PlusMinus (&iEXEChomperDelay, 154, 106, 3, 255, -1, 0);
@@ -4781,7 +5040,9 @@ void EXE (void)
 						if (((iHomeComputer == 1) &&
 							(ulMouseDelayA[iDiskImageA] != 0x00)) ||
 							((iHomeComputer == 2) &&
-							(ulMouseDelayB[iDiskImageB] != 0x00)))
+							(ulMouseDelayB[iDiskImageB] != 0x00)) ||
+							((iHomeComputer == 3) &&
+							(ulMouseDelayC[iDiskImageC] != 0x00)))
 						{
 							PlusMinus (&iEXEMouseDelay, 139, 130, 0, 255, -10, 0);
 							PlusMinus (&iEXEMouseDelay, 154, 130, 0, 255, -1, 0);
@@ -4821,7 +5082,9 @@ void EXE (void)
 						if (((iHomeComputer == 1) &&
 							(ulGuardA[iDiskImageA][iEXETab - 1] != 0x00)) ||
 							((iHomeComputer == 2) &&
-							(ulGuardB[iDiskImageB][iEXETab - 1] != 0x00)))
+							(ulGuardB[iDiskImageB][iEXETab - 1] != 0x00)) ||
+							((iHomeComputer == 3) &&
+							(ulGuardC[iDiskImageC][iEXETab - 1] != 0x00)))
 						{
 							for (iRow = 1; iRow <= 6; iRow++)
 							{
@@ -4911,7 +5174,9 @@ void EXE (void)
 							if (((iHomeComputer == 1) &&
 								(ulGuardHPA[iDiskImageA] != 0x00)) ||
 								((iHomeComputer == 2) &&
-								(ulGuardHPB[iDiskImageB] != 0x00)))
+								(ulGuardHPB[iDiskImageB] != 0x00)) ||
+								((iHomeComputer == 3) &&
+								(ulGuardHPC[iDiskImageC] != 0x00)))
 							{
 								PlusMinus (&iEXEGuardHP[iEXETabS], 139, 236, 0, 255, -10, 0);
 								PlusMinus (&iEXEGuardHP[iEXETabS], 154, 236, 0, 255, -1, 0);
@@ -4923,7 +5188,9 @@ void EXE (void)
 							if (((iHomeComputer == 1) &&
 								(ulGuardUniformA[iDiskImageA] != 0x00)) ||
 								((iHomeComputer == 2) &&
-								(ulGuardUniformB[iDiskImageB] != 0x00)))
+								(ulGuardUniformB[iDiskImageB] != 0x00)) ||
+								((iHomeComputer == 3) &&
+								(ulGuardUniformC[iDiskImageC] != 0x00)))
 							{
 								PlusMinus (&iEXEGuardU[iEXETabS], 139, 260, 0, 1, -10, 0);
 								PlusMinus (&iEXEGuardU[iEXETabS], 154, 260, 0, 1, -1, 0);
@@ -4935,7 +5202,9 @@ void EXE (void)
 							if (((iHomeComputer == 1) &&
 								(ulGuardSpriteA[iDiskImageA] != 0x00)) ||
 								((iHomeComputer == 2) &&
-								(ulGuardSpriteB[iDiskImageB] != 0x00)))
+								(ulGuardSpriteB[iDiskImageB] != 0x00)) ||
+								((iHomeComputer == 3) &&
+								(ulGuardSpriteC[iDiskImageC] != 0x00)))
 							{
 								if (iEXETabS > 2) /*** Levels 0, 1 and 2 must use 0x00. ***/
 								{
@@ -4952,7 +5221,8 @@ void EXE (void)
 							if (iEXETabS == 3) { iMin = 0; } else { iMin = 1; }
 
 							if (((iHomeComputer == 1) && (ulEnv1A[iDiskImageA] != 0x00)) ||
-								((iHomeComputer == 2) && (ulEnv1B[iDiskImageB] != 0x00)))
+								((iHomeComputer == 2) && (ulEnv1B[iDiskImageB] != 0x00)) ||
+								((iHomeComputer == 3) && (ulEnv1C[iDiskImageC] != 0x00)))
 							{
 								PlusMinus (&iEXEEnv1[iEXETabS], 139, 308, iMin, 2, -10, 0);
 								PlusMinus (&iEXEEnv1[iEXETabS], 154, 308, iMin, 2, -1, 0);
@@ -4961,7 +5231,8 @@ void EXE (void)
 							}
 
 							if (((iHomeComputer == 1) && (ulEnv2A[iDiskImageA] != 0x00)) ||
-								((iHomeComputer == 2) && (ulEnv2B[iDiskImageB] != 0x00)))
+								((iHomeComputer == 2) && (ulEnv2B[iDiskImageB] != 0x00)) ||
+								((iHomeComputer == 3) && (ulEnv2C[iDiskImageC] != 0x00)))
 							{
 								PlusMinus (&iEXEEnv2[iEXETabS], 139, 332, iMin, 2, -10, 0);
 								PlusMinus (&iEXEEnv2[iEXETabS], 154, 332, iMin, 2, -1, 0);
@@ -5017,7 +5288,8 @@ void ShowEXE (void)
 
 	/*** Prince HP. ***/
 	if (((iHomeComputer == 1) && (ulPrinceHPA[iDiskImageA] != 0x00)) ||
-		((iHomeComputer == 2) && (ulPrinceHPB[iDiskImageB] != 0x00)))
+		((iHomeComputer == 2) && (ulPrinceHPB[iDiskImageB] != 0x00)) ||
+		((iHomeComputer == 3) && (ulPrinceHPC[iDiskImageC] != 0x00)))
 	{
 		if (iEXEPrinceHP == 0x03) { clr = color_bl; } else { clr = color_blue; }
 		CenterNumber (iEXEPrinceHP, 167, 58, clr, 0);
@@ -5025,7 +5297,8 @@ void ShowEXE (void)
 
 	/*** Shadow HP. ***/
 	if (((iHomeComputer == 1) && (ulShadowHPA[iDiskImageA] != 0x00)) ||
-		((iHomeComputer == 2) && (ulShadowHPB[iDiskImageB] != 0x00)))
+		((iHomeComputer == 2) && (ulShadowHPB[iDiskImageB] != 0x00)) ||
+		((iHomeComputer == 3) && (ulShadowHPC[iDiskImageC] != 0x00)))
 	{
 		if (iEXEShadowHP == 0x04) { clr = color_bl; } else { clr = color_blue; }
 		CenterNumber (iEXEShadowHP, 167, 82, clr, 0);
@@ -5033,7 +5306,8 @@ void ShowEXE (void)
 
 	/*** Chomper delay. ***/
 	if (((iHomeComputer == 1) && (ulChomperDelayA[iDiskImageA] != 0x00)) ||
-		((iHomeComputer == 2) && (ulChomperDelayB[iDiskImageB] != 0x00)))
+		((iHomeComputer == 2) && (ulChomperDelayB[iDiskImageB] != 0x00)) ||
+		((iHomeComputer == 3) && (ulChomperDelayC[iDiskImageC] != 0x00)))
 	{
 		if (iEXEChomperDelay == 0x10) { clr = color_bl; }
 			else { clr = color_blue; }
@@ -5042,7 +5316,8 @@ void ShowEXE (void)
 
 	/*** Mouse delay. ***/
 	if (((iHomeComputer == 1) && (ulMouseDelayA[iDiskImageA] != 0x00)) ||
-		((iHomeComputer == 2) && (ulMouseDelayB[iDiskImageB] != 0x00)))
+		((iHomeComputer == 2) && (ulMouseDelayB[iDiskImageB] != 0x00)) ||
+		((iHomeComputer == 3) && (ulMouseDelayC[iDiskImageC] != 0x00)))
 	{
 		if (iEXEMouseDelay == 0x96) { clr = color_bl; } else { clr = color_blue; }
 		CenterNumber (iEXEMouseDelay, 167, 130, clr, 0);
@@ -5090,7 +5365,8 @@ void ShowEXE (void)
 	ShowImage (imgexetabs, iTabX, iTabY, "imgexetabs");
 
 	if (((iHomeComputer == 1) && (ulGuardA[iDiskImageA][iEXETab - 1] != 0x00)) ||
-		((iHomeComputer == 2) && (ulGuardB[iDiskImageB][iEXETab - 1] != 0x00)))
+		((iHomeComputer == 2) && (ulGuardB[iDiskImageB][iEXETab - 1] != 0x00)) ||
+		((iHomeComputer == 3) && (ulGuardC[iDiskImageC][iEXETab - 1] != 0x00)))
 	{
 		/* Use black.
 		 * Override with blue if the setting does not match the default.
@@ -5119,7 +5395,8 @@ void ShowEXE (void)
 
 	/*** Guard HP. ***/
 	if (((iHomeComputer == 1) && (ulGuardHPA[iDiskImageA] != 0x00)) ||
-		((iHomeComputer == 2) && (ulGuardHPB[iDiskImageB] != 0x00)))
+		((iHomeComputer == 2) && (ulGuardHPB[iDiskImageB] != 0x00)) ||
+		((iHomeComputer == 3) && (ulGuardHPC[iDiskImageC] != 0x00)))
 	{
 		if (iEXETabS != 14)
 		{
@@ -5132,7 +5409,8 @@ void ShowEXE (void)
 
 	/*** Guard uniform. ***/
 	if (((iHomeComputer == 1) && (ulGuardUniformA[iDiskImageA] != 0x00)) ||
-		((iHomeComputer == 2) && (ulGuardUniformB[iDiskImageB] != 0x00)))
+		((iHomeComputer == 2) && (ulGuardUniformB[iDiskImageB] != 0x00)) ||
+		((iHomeComputer == 3) && (ulGuardUniformC[iDiskImageC] != 0x00)))
 	{
 		if (iEXETabS != 14)
 		{
@@ -5145,7 +5423,8 @@ void ShowEXE (void)
 
 	/*** Guard sprite. ***/
 	if (((iHomeComputer == 1) && (ulGuardSpriteA[iDiskImageA] != 0x00)) ||
-		((iHomeComputer == 2) && (ulGuardSpriteB[iDiskImageB] != 0x00)))
+		((iHomeComputer == 2) && (ulGuardSpriteB[iDiskImageB] != 0x00)) ||
+		((iHomeComputer == 3) && (ulGuardSpriteC[iDiskImageC] != 0x00)))
 	{
 		if (iEXETabS != 14)
 		{
@@ -5158,7 +5437,8 @@ void ShowEXE (void)
 
 	/*** Env. 1 ***/
 	if (((iHomeComputer == 1) && (ulEnv1A[iDiskImageA] != 0x00)) ||
-		((iHomeComputer == 2) && (ulEnv1B[iDiskImageB] != 0x00)))
+		((iHomeComputer == 2) && (ulEnv1B[iDiskImageB] != 0x00)) ||
+		((iHomeComputer == 3) && (ulEnv1C[iDiskImageC] != 0x00)))
 	{
 		if (iEXETabS > 2) { clr = color_bl; } else { clr = color_gray; }
 		if (iEXEEnv1[iEXETabS] != arDefaultEnv1[iEXETabS])
@@ -5168,7 +5448,8 @@ void ShowEXE (void)
 
 	/*** Env. 2 ***/
 	if (((iHomeComputer == 1) && (ulEnv2A[iDiskImageA] != 0x00)) ||
-		((iHomeComputer == 2) && (ulEnv2B[iDiskImageB] != 0x00)))
+		((iHomeComputer == 2) && (ulEnv2B[iDiskImageB] != 0x00)) ||
+		((iHomeComputer == 3) && (ulEnv2C[iDiskImageC] != 0x00)))
 	{
 		if (iEXETabS > 2) { clr = color_bl; } else { clr = color_gray; }
 		if (iEXEEnv2[iEXETabS] != arDefaultEnv2[iEXETabS])
@@ -5180,7 +5461,9 @@ void ShowEXE (void)
 	if (((iHomeComputer == 1) && (ulEnv1A[iDiskImageA] != 0x00) &&
 		(ulEnv2A[iDiskImageA] != 0x00)) ||
 		((iHomeComputer == 2) && (ulEnv1B[iDiskImageB] != 0x00) &&
-		(ulEnv2B[iDiskImageB] != 0x00)))
+		(ulEnv2B[iDiskImageB] != 0x00)) ||
+		((iHomeComputer == 3) && (ulEnv1C[iDiskImageC] != 0x00) &&
+		(ulEnv2C[iDiskImageC] != 0x00)))
 	{
 		if (iEXEEnv1[iEXETabS] == iEXEEnv2[iEXETabS])
 		{
@@ -5492,7 +5775,8 @@ void InitScreenAction (char *sAction)
 	if (strcmp (sAction, "env") == 0)
 	{
 		if (((iHomeComputer == 1) && (ulEnv1A[iDiskImageA] != 0x00)) ||
-			((iHomeComputer == 2) && (ulEnv1B[iDiskImageB] != 0x00)))
+			((iHomeComputer == 2) && (ulEnv1B[iDiskImageB] != 0x00)) ||
+			((iHomeComputer == 3) && (ulEnv1C[iDiskImageC] != 0x00)))
 		{
 			if ((iCurLevel >= 3) && (iCurLevel <= 14))
 			{
@@ -5552,19 +5836,26 @@ int StartGame (void *unused)
 
 	PlaySound ("wav/emulator.wav");
 
-	if (iHomeComputer == 1)
+	switch (iHomeComputer)
 	{
+		case 1: /*** AppleWin ***/
 #if defined WIN32 || _WIN32 || WIN64 || _WIN64
 snprintf (sWine, 200, "%s", "");
 #else
 snprintf (sWine, 200, "%s", "wine ");
 #endif
 
-		snprintf (sSystem, 200, "%sAppleWin%sAppleWin.exe > %s",
-			sWine, SLASH, DEVNULL);
-	} else {
-		snprintf (sSystem, 200, "b-em -m10 -fasttape %s > %s",
-			sPathFile, DEVNULL);
+			snprintf (sSystem, 200, "%sAppleWin%sAppleWin.exe -model %s -h1 %s > %s",
+				sWine, SLASH, "apple2ee", sPathFile, DEVNULL);
+			break;
+		case 2: /*** B-em ***/
+			snprintf (sSystem, 200, "b-em -m10 -fasttape %s > %s",
+				sPathFile, DEVNULL);
+			break;
+		case 3: /*** VICE ***/
+			snprintf (sSystem, 200, "x64sc %s > %s",
+				sPathFile, DEVNULL);
+			break;
 	}
 	if (system (sSystem) == -1)
 		{ printf ("[ WARN ] Could not execute emulator!\n"); }
@@ -5706,10 +5997,10 @@ void Zoom (int iToggleFull)
 	}
 
 	SDL_SetWindowFullscreen (window, iFullscreen);
-	SDL_SetWindowSize (window, (SCREEN_WIDTH) * iScale,
-		(SCREEN_HEIGHT) * iScale);
-	SDL_RenderSetLogicalSize (ascreen, (SCREEN_WIDTH) * iScale,
-		(SCREEN_HEIGHT) * iScale);
+	SDL_SetWindowSize (window, (WINDOW_WIDTH) * iScale,
+		(WINDOW_HEIGHT) * iScale);
+	SDL_RenderSetLogicalSize (ascreen, (WINDOW_WIDTH) * iScale,
+		(WINDOW_HEIGHT) * iScale);
 	SDL_SetWindowPosition (window, SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED);
 	TTF_CloseFont (font1);
@@ -7012,6 +7303,7 @@ void CreateBAK (void)
 	{
 		case 1: fBAK = fopen (BACKUP_A, "wb"); break;
 		case 2: fBAK = fopen (BACKUP_B, "wb"); break;
+		case 3: fBAK = fopen (BACKUP_C, "wb"); break;
 		default: printf ("[FAILED] iHomeComputer!\n"); exit (EXIT_ERROR); break;
 	}
 	if (fBAK == NULL)
@@ -7714,7 +8006,11 @@ void CenterNumber (int iNumber, int iX, int iY,
 	} else {
 		snprintf (sText, MAX_TEXT, "%02x", iNumber);
 	}
-	message = TTF_RenderText_Blended_Wrapped (font3, sText, fore, 0);
+	/* The 100000 is a workaround for 0 being broken. SDL devs have fixed that
+	 * see e.g. https://hg.libsdl.org/SDL_ttf/rev/72b8861dbc01 but
+	 * Ubuntu et al. still ship an sdl-ttf that is >10 years(!) old.
+	 */
+	message = TTF_RenderText_Blended_Wrapped (font3, sText, fore, 100000);
 	messaget = SDL_CreateTextureFromSurface (ascreen, message);
 	if (iHex == 0)
 	{
@@ -7777,6 +8073,7 @@ void EXELoad (void)
 	{
 		case 1: iHCSwitch = 1; break;
 		case 2: iHCSwitch = 2; break;
+		case 3: iHCSwitch = 3; break;
 		default:
 			printf ("[FAILED] Strange iHomeComputer: %i!\n", iHomeComputer);
 			exit (EXIT_ERROR); break;
@@ -7795,6 +8092,7 @@ void EXELoad (void)
 	{
 		case 1: ulOffset = ulPrinceHPA[iDiskImageA]; break;
 		case 2: ulOffset = ulPrinceHPB[iDiskImageB]; break;
+		case 3: ulOffset = ulPrinceHPC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -7808,6 +8106,7 @@ void EXELoad (void)
 	{
 		case 1: ulOffset = ulShadowHPA[iDiskImageA]; break;
 		case 2: ulOffset = ulShadowHPB[iDiskImageB]; break;
+		case 3: ulOffset = ulShadowHPC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -7821,6 +8120,7 @@ void EXELoad (void)
 	{
 		case 1: ulOffset = ulChomperDelayA[iDiskImageA]; break;
 		case 2: ulOffset = ulChomperDelayB[iDiskImageB]; break;
+		case 3: ulOffset = ulChomperDelayC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -7834,6 +8134,7 @@ void EXELoad (void)
 	{
 		case 1: ulOffset = ulMouseDelayA[iDiskImageA]; break;
 		case 2: ulOffset = ulMouseDelayB[iDiskImageB]; break;
+		case 3: ulOffset = ulMouseDelayC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -7849,6 +8150,7 @@ void EXELoad (void)
 		{
 			case 1: ulOffset = ulGuardA[iDiskImageA][iTab - 1]; break;
 			case 2: ulOffset = ulGuardB[iDiskImageB][iTab - 1]; break;
+			case 3: ulOffset = ulGuardC[iDiskImageC][iTab - 1]; break;
 		}
 		if (ulOffset != 0x00)
 		{
@@ -7866,6 +8168,7 @@ void EXELoad (void)
 	{
 		case 1: ulOffset = ulGuardHPA[iDiskImageA]; break;
 		case 2: ulOffset = ulGuardHPB[iDiskImageB]; break;
+		case 3: ulOffset = ulGuardHPC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -7885,6 +8188,7 @@ void EXELoad (void)
 	{
 		case 1: ulOffset = ulGuardUniformA[iDiskImageA]; break;
 		case 2: ulOffset = ulGuardUniformB[iDiskImageB]; break;
+		case 3: ulOffset = ulGuardUniformC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -7904,6 +8208,7 @@ void EXELoad (void)
 	{
 		case 1: ulOffset = ulGuardSpriteA[iDiskImageA]; break;
 		case 2: ulOffset = ulGuardSpriteB[iDiskImageB]; break;
+		case 3: ulOffset = ulGuardSpriteC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -7931,6 +8236,7 @@ void EXELoad (void)
 	{
 		case 1: ulOffset = ulEnv1A[iDiskImageA]; break;
 		case 2: ulOffset = ulEnv1B[iDiskImageB]; break;
+		case 3: ulOffset = ulEnv1C[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -7952,6 +8258,7 @@ void EXELoad (void)
 	{
 		case 1: ulOffset = ulEnv2A[iDiskImageA]; break;
 		case 2: ulOffset = ulEnv2B[iDiskImageB]; break;
+		case 3: ulOffset = ulEnv2C[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -7987,6 +8294,7 @@ void EXESave (void)
 	{
 		case 1: iHCSwitch = 1; break;
 		case 2: iHCSwitch = 2; break;
+		case 3: iHCSwitch = 3; break;
 		default:
 			printf ("[FAILED] Strange iHomeComputer: %i!\n", iHomeComputer);
 			exit (EXIT_ERROR); break;
@@ -8005,6 +8313,7 @@ void EXESave (void)
 	{
 		case 1: ulOffset = ulPrinceHPA[iDiskImageA]; break;
 		case 2: ulOffset = ulPrinceHPB[iDiskImageB]; break;
+		case 3: ulOffset = ulPrinceHPC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -8018,6 +8327,7 @@ void EXESave (void)
 	{
 		case 1: ulOffset = ulShadowHPA[iDiskImageA]; break;
 		case 2: ulOffset = ulShadowHPB[iDiskImageB]; break;
+		case 3: ulOffset = ulShadowHPC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -8031,6 +8341,7 @@ void EXESave (void)
 	{
 		case 1: ulOffset = ulChomperDelayA[iDiskImageA]; break;
 		case 2: ulOffset = ulChomperDelayB[iDiskImageB]; break;
+		case 3: ulOffset = ulChomperDelayC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -8044,6 +8355,7 @@ void EXESave (void)
 	{
 		case 1: ulOffset = ulMouseDelayA[iDiskImageA]; break;
 		case 2: ulOffset = ulMouseDelayB[iDiskImageB]; break;
+		case 3: ulOffset = ulMouseDelayC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -8059,6 +8371,7 @@ void EXESave (void)
 		{
 			case 1: ulOffset = ulGuardA[iDiskImageA][iTab - 1]; break;
 			case 2: ulOffset = ulGuardB[iDiskImageB][iTab - 1]; break;
+			case 3: ulOffset = ulGuardC[iDiskImageC][iTab - 1]; break;
 		}
 		if (ulOffset != 0x00)
 		{
@@ -8076,6 +8389,7 @@ void EXESave (void)
 	{
 		case 1: ulOffset = ulGuardHPA[iDiskImageA]; break;
 		case 2: ulOffset = ulGuardHPB[iDiskImageB]; break;
+		case 3: ulOffset = ulGuardHPC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -8095,6 +8409,7 @@ void EXESave (void)
 	{
 		case 1: ulOffset = ulGuardUniformA[iDiskImageA]; break;
 		case 2: ulOffset = ulGuardUniformB[iDiskImageB]; break;
+		case 3: ulOffset = ulGuardUniformC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -8114,6 +8429,7 @@ void EXESave (void)
 	{
 		case 1: ulOffset = ulGuardSpriteA[iDiskImageA]; break;
 		case 2: ulOffset = ulGuardSpriteB[iDiskImageB]; break;
+		case 3: ulOffset = ulGuardSpriteC[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -8137,6 +8453,7 @@ void EXESave (void)
 	{
 		case 1: ulOffset = ulEnv1A[iDiskImageA]; break;
 		case 2: ulOffset = ulEnv1B[iDiskImageB]; break;
+		case 3: ulOffset = ulEnv1C[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -8153,6 +8470,7 @@ void EXESave (void)
 	{
 		case 1: ulOffset = ulEnv2A[iDiskImageA]; break;
 		case 2: ulOffset = ulEnv2B[iDiskImageB]; break;
+		case 3: ulOffset = ulEnv2C[iDiskImageC]; break;
 	}
 	if (ulOffset != 0x00)
 	{
@@ -8644,6 +8962,15 @@ void HomeComputerAction (char *sAction)
 			iHomeComputerActive = 0;
 		}
 	}
+
+	if (strcmp (sAction, "three") == 0)
+	{
+		if (iC64 == 1)
+		{
+			iHomeComputer = 3;
+			iHomeComputerActive = 0;
+		}
+	}
 }
 /*****************************************************************************/
 void HomeComputer (void)
@@ -8673,14 +9000,19 @@ void HomeComputer (void)
 								{ HomeComputerAction ("one"); }
 							if ((iBBCMaster == 1) && (iOnBBCMaster == 1))
 								{ HomeComputerAction ("two"); }
+							if ((iC64 == 1) && (iOnC64 == 1))
+								{ HomeComputerAction ("three"); }
 							break;
 						case SDL_CONTROLLER_BUTTON_B:
 						case SDL_CONTROLLER_BUTTON_BACK:
 							Quit(); break;
 						case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
 						case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
-							if ((iOnBBCMaster == 1) && (iAppleII == 1))
+							if ((iOnC64 == 1) && (iBBCMaster == 1))
 							{
+								iOnBBCMaster = 1; iOnC64 = 0;
+								ShowHomeComputer();
+							} else if ((iOnBBCMaster == 1) && (iAppleII == 1)) {
 								iOnAppleII = 1; iOnBBCMaster = 0;
 								ShowHomeComputer();
 							}
@@ -8691,6 +9023,9 @@ void HomeComputer (void)
 							{
 								iOnAppleII = 0; iOnBBCMaster = 1;
 								ShowHomeComputer();
+							} else if ((iOnBBCMaster == 1) && (iC64 == 1)) {
+								iOnBBCMaster = 0; iOnC64 = 1;
+								ShowHomeComputer();
 							}
 							break;
 						case SDL_CONTROLLER_BUTTON_X:
@@ -8698,6 +9033,9 @@ void HomeComputer (void)
 							break;
 						case SDL_CONTROLLER_BUTTON_Y:
 							HomeComputerAction ("two");
+							break;
+						case SDL_CONTROLLER_BUTTON_GUIDE:
+							HomeComputerAction ("three");
 							break;
 					}
 					ShowHomeComputer();
@@ -8708,8 +9046,11 @@ void HomeComputer (void)
 					if ((event.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT) ||
 						(iXJoy1 < -30000) || (iXJoy2 < -30000)) /*** left ***/
 					{
-						if ((iOnBBCMaster == 1) && (iAppleII == 1))
+						if ((iOnC64 == 1) && (iBBCMaster == 1))
 						{
+							iOnBBCMaster = 1; iOnC64 = 0;
+							ShowHomeComputer();
+						} else if ((iOnBBCMaster == 1) && (iAppleII == 1)) {
 							iOnAppleII = 1; iOnBBCMaster = 0;
 							ShowHomeComputer();
 						}
@@ -8720,6 +9061,9 @@ void HomeComputer (void)
 						if ((iOnAppleII == 1) && (iBBCMaster == 1))
 						{
 							iOnAppleII = 0; iOnBBCMaster = 1;
+							ShowHomeComputer();
+						} else if ((iOnBBCMaster == 1) && (iC64 == 1)) {
+							iOnBBCMaster = 0; iOnC64 = 1;
 							ShowHomeComputer();
 						}
 					}
@@ -8736,6 +9080,8 @@ void HomeComputer (void)
 								{ HomeComputerAction ("one"); }
 							if ((iBBCMaster == 1) && (iOnBBCMaster == 1))
 								{ HomeComputerAction ("two"); }
+							if ((iC64 == 1) && (iOnC64 == 1))
+								{ HomeComputerAction ("three"); }
 							break;
 						case SDLK_1: /*** Apple II ***/
 							HomeComputerAction ("one");
@@ -8743,9 +9089,15 @@ void HomeComputer (void)
 						case SDLK_2: /*** BBC Master ***/
 							HomeComputerAction ("two");
 							break;
+						case SDLK_3: /*** C64 ***/
+							HomeComputerAction ("three");
+							break;
 						case SDLK_LEFT:
-							if ((iOnBBCMaster == 1) && (iAppleII == 1))
+							if ((iOnC64 == 1) && (iBBCMaster == 1))
 							{
+								iOnBBCMaster = 1; iOnC64 = 0;
+								ShowHomeComputer();
+							} else if ((iOnBBCMaster == 1) && (iAppleII == 1)) {
 								iOnAppleII = 1; iOnBBCMaster = 0;
 								ShowHomeComputer();
 							}
@@ -8754,6 +9106,9 @@ void HomeComputer (void)
 							if ((iOnAppleII == 1) && (iBBCMaster == 1))
 							{
 								iOnAppleII = 0; iOnBBCMaster = 1;
+								ShowHomeComputer();
+							} else if ((iOnBBCMaster == 1) && (iC64 == 1)) {
+								iOnBBCMaster = 0; iOnC64 = 1;
 								ShowHomeComputer();
 							}
 							break;
@@ -8768,15 +9123,18 @@ void HomeComputer (void)
 					iYPos = event.motion.y;
 					if ((iOldXPos == iXPos) && (iOldYPos == iYPos)) { break; }
 
-					if (InArea (88, 22, 88 + 176, 22 + 417) == 1) /*** Apple II ***/
+					if (InArea (22, 22, 22 + 176, 22 + 417) == 1) /*** Apple II ***/
 					{
 						if ((iAppleII == 1) && (iOnAppleII != 1))
-							{ iOnAppleII = 1; iOnBBCMaster = 0; }
-					} else if (InArea (348, 22, 348 + 176, 22 + 417) == 1) { /*** BM ***/
+							{ iOnAppleII = 1; iOnBBCMaster = 0; iOnC64 = 0; }
+					} else if (InArea (218, 22, 218 + 176, 22 + 417) == 1) { /*** BM ***/
 						if ((iBBCMaster == 1) && (iOnBBCMaster != 1))
-							{ iOnAppleII = 0; iOnBBCMaster = 1; }
+							{ iOnAppleII = 0; iOnBBCMaster = 1; iOnC64 = 0; }
+					} else if (InArea (414, 22, 414 + 176, 22 + 417) == 1) { /*** C ***/
+						if ((iC64 == 1) && (iOnC64 != 1))
+							{ iOnAppleII = 0; iOnBBCMaster = 0; iOnC64 = 1; }
 					} else {
-						iOnAppleII = 0; iOnBBCMaster = 0;
+						iOnAppleII = 0; iOnBBCMaster = 0; iOnC64 = 0;
 					}
 					ShowHomeComputer();
 					break;
@@ -8788,13 +9146,17 @@ void HomeComputer (void)
 					iOnBBCMaster = 0;
 					if (event.button.button == 1)
 					{
-						if (InArea (88, 22, 88 + 176, 22 + 417) == 1)
+						if (InArea (22, 22, 22 + 176, 22 + 417) == 1)
 						{ /*** Apple II ***/
 							HomeComputerAction ("one");
 						}
-						if (InArea (348, 22, 348 + 176, 22 + 417) == 1)
+						if (InArea (218, 22, 218 + 176, 22 + 417) == 1)
 						{ /*** BBC Master ***/
 							HomeComputerAction ("two");
+						}
+						if (InArea (414, 22, 414 + 176, 22 + 417) == 1)
+						{ /*** C64 ***/
+							HomeComputerAction ("three");
 						}
 					}
 					ShowHomeComputer(); break;
@@ -8826,26 +9188,39 @@ void ShowHomeComputer (void)
 	if (iAppleII == 0)
 	{
 		/*** disabled ***/
-		ShowImage (imghcadis, 88, 22, "imghcadis");
+		ShowImage (imghcadis, 22, 22, "imghcadis");
 	} else if (iOnAppleII == 0) {
 		/*** off ***/
-		ShowImage (imghcaoff, 88, 22, "imghcaoff");
+		ShowImage (imghcaoff, 22, 22, "imghcaoff");
 	} else {
 		/*** on ***/
-		ShowImage (imghcaon, 88, 22, "imghcaon");
+		ShowImage (imghcaon, 22, 22, "imghcaon");
 	}
 
 	/*** BBC Master ***/
 	if (iBBCMaster == 0)
 	{
 		/*** disabled ***/
-		ShowImage (imghcbdis, 348, 22, "imghcbdis");
+		ShowImage (imghcbdis, 218, 22, "imghcbdis");
 	} else if (iOnBBCMaster == 0) {
 		/*** off ***/
-		ShowImage (imghcboff, 348, 22, "imghcboff");
+		ShowImage (imghcboff, 218, 22, "imghcboff");
 	} else {
 		/*** on ***/
-		ShowImage (imghcbon, 348, 22, "imghcbon");
+		ShowImage (imghcbon, 218, 22, "imghcbon");
+	}
+
+	/*** C64 ***/
+	if (iC64 == 0)
+	{
+		/*** disabled ***/
+		ShowImage (imghccdis, 414, 22, "imghccdis");
+	} else if (iOnC64 == 0) {
+		/*** off ***/
+		ShowImage (imghccoff, 414, 22, "imghccoff");
+	} else {
+		/*** on ***/
+		ShowImage (imghccon, 414, 22, "imghccon");
 	}
 
 	/*** refresh screen ***/
@@ -8873,6 +9248,7 @@ void PlaytestStart (int iLevel)
 	{
 		case 1: iOffsetStart = ulSkipIntroA[iDiskImageA]; break;
 		case 2: iOffsetStart = ulSkipIntroB[iDiskImageB]; break;
+		case 3: iOffsetStart = ulSkipIntroC[iDiskImageC]; break;
 		default: printf ("[FAILED] iHomeComputer!\n"); exit (EXIT_ERROR); break;
 	}
 	if (iOffsetStart != 0x00)
@@ -8887,6 +9263,7 @@ void PlaytestStart (int iLevel)
 	{
 		case 1: iOffsetStart = ulStartLevelA[iDiskImageA]; break;
 		case 2: iOffsetStart = ulStartLevelB[iDiskImageB]; break;
+		case 3: iOffsetStart = ulStartLevelC[iDiskImageC]; break;
 		default: printf ("[FAILED] iHomeComputer!\n"); exit (EXIT_ERROR); break;
 	}
 	if (iOffsetStart != 0x00)
@@ -8922,6 +9299,7 @@ void PlaytestStop (void)
 	{
 		case 1: iOffsetStart = ulSkipIntroA[iDiskImageA]; break;
 		case 2: iOffsetStart = ulSkipIntroB[iDiskImageB]; break;
+		case 3: iOffsetStart = ulSkipIntroC[iDiskImageC]; break;
 		default: printf ("[FAILED] iHomeComputer!\n"); exit (EXIT_ERROR); break;
 	}
 	if (iOffsetStart != 0x00)
@@ -8936,6 +9314,7 @@ void PlaytestStop (void)
 	{
 		case 1: iOffsetStart = ulStartLevelA[iDiskImageA]; break;
 		case 2: iOffsetStart = ulStartLevelB[iDiskImageB]; break;
+		case 3: iOffsetStart = ulStartLevelC[iDiskImageC]; break;
 		default: printf ("[FAILED] iHomeComputer!\n"); exit (EXIT_ERROR); break;
 	}
 	if (iOffsetStart != 0x00)

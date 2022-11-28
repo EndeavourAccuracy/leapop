@@ -2,7 +2,7 @@
 MAIN SCREEN
 ---------------------------------------------------------------------------
 0-9                                  Shortcuts for various tiles.
-d                                    Start the level in AppleWin/B-em.
+d                                    Start the level in AppleWin/B-em/VICE.
 e                                    Go to the events screen.
 f (and Alt + Enter/Return/Space)     Toggle fullscreen mode.
 h                                    Flip the room horizontally.
@@ -37,7 +37,7 @@ Ctrl+v                               Paste the room.
 ---------------------------------------------------------------------------
 ROOM LINKS SCREEN
 ---------------------------------------------------------------------------
-d                                    Start the level in AppleWin/B-em.
+d                                    Start the level in AppleWin/B-em/VICE.
 e                                    Go to the events screen.
 q (and Escape)                       Go to the main screen.
 r                                    Modify broken room links.
@@ -60,7 +60,7 @@ Arrow keys                           Select adjacent room.
 ---------------------------------------------------------------------------
 EVENTS SCREEN
 ---------------------------------------------------------------------------
-d                                    Start the level in AppleWin/B-em.
+d                                    Start the level in AppleWin/B-em/VICE.
 n                                    Check the box under N.
 q (and Escape)                       Go to the main screen.
 r                                    Go to the room links screen.

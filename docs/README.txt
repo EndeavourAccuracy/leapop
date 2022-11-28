@@ -9,11 +9,11 @@
 
 ===[1 - ABOUT]=================================================================
 
-leapop v0.9b (April 2018)
-Copyright (C) 2017, 2018 Norbert de Jonge <mail@norbertdejonge.nl>
+leapop v1.0 (November 2022)
+Copyright (C) 2017-2022 Norbert de Jonge <nlmdejonge@gmail.com>
 
-A level editor of Prince of Persia for the Apple II and BBC Master.
-The leapop website can be found at [ http://www.norbertdejonge.nl/leapop/ ].
+A level editor of Prince of Persia for the Apple II, BBC Master, and C64.
+The leapop website can be found at [ https://github.com/EndeavourAccuracy/leapop ].
 
 ===[2 - LICENSE/DISCLAIMER]====================================================
 
@@ -32,12 +32,13 @@ The Bitstream Vera font by Jim Lyles is © Bitstream, Inc.
 The Xbox icons are © Jeff Jenkins, CC BY 3.0.
 AppleWin is © AppleWin Team, GPLv2+.
 B-em is © Tom Walker et al., GPLv2
+VICE is © Jarkko Sonninen et al., GPLv2+.
 
 ===[3 - USAGE]=================================================================
 
 My apoplexy level editor uses the same GUI.
 Its instructional videos are available at:
-http://www.norbertdejonge.nl/apoplexy/
+https://apoplexy.github.io/apoplexysite/
 
 The Apple II disk image included is a 3.5" in ProDOS sector order.
 It was built from:
@@ -82,14 +83,17 @@ https://www.apple.asimov.net/images/games/collections/san_inc_prodos/
 The included BBC Master disk image was obtained from:
 https://github.com/kieranhj/pop-beeb/
 
+The included C64 disk image was obtained from:
+https://csdb.dk/release/?id=102540
+
 ===[4 - FEEDBACK]==============================================================
 
-If leapop crashes, gets compilation errors or crashes while building, send an e-mail to [ mail@norbertdejonge.nl ]. Make sure to describe exactly what actions triggered the bug and the precise symptoms of the bug. If possible, also include: 'uname -a', 'gcc -v', 'sdl2-config --version', and 'leapop --version'.
+If leapop crashes, gets compilation errors or crashes while building, send an e-mail to [ nlmdejonge@gmail.com ]. Make sure to describe exactly what actions triggered the bug and the precise symptoms of the bug. If possible, also include: 'uname -a', 'gcc -v', 'sdl2-config --version', and 'leapop --version'.
 
 ===[5 - DID YOU CREATE NEW LEVELS?]============================================
 
 Feel free to share your work:
-http://forum.princed.org/
+https://forum.princed.org/
 
 ===[6 - (RE)COMPILING]=========================================================
 
@@ -107,9 +111,9 @@ Windows (32-bit)
 
 1.1 Download
 
-http://sourceforge.net/projects/orwelldevcpp/files/Setup%20Releases/
+https://sourceforge.net/projects/orwelldevcpp/files/Setup%20Releases/
 or
-http://downloads.sourceforge.net/project/orwelldevcpp/Setup%20Releases/
+https://downloads.sourceforge.net/project/orwelldevcpp/Setup%20Releases/
   Dev-Cpp%205.11%20TDM-GCC%204.9.2%20Setup.exe
 
 1.2 Install
@@ -120,11 +124,11 @@ Simply run the executable.
 
 2.1 Download
 
-http://libsdl.org/release/
+https://libsdl.org/release/
   SDL2-devel-2.0.7-mingw.tar.gz
-http://libsdl.org/projects/SDL_ttf/release/
+https://libsdl.org/projects/SDL_ttf/release/
   SDL2_ttf-devel-2.0.14-mingw.tar.gz
-http://libsdl.org/projects/SDL_image/release/
+https://libsdl.org/projects/SDL_image/release/
   SDL2_image-devel-2.0.2-mingw.tar.gz
 
 2.2 Install
@@ -147,6 +151,7 @@ Go to: File->New->Project...
 Basic->Console Application
 C Project
 Name: leapop
+Save leapop.dev to the leapop directory.
 
 Go to: Project->Remove From Project...
 Select main.c and press Delete.
@@ -169,10 +174,10 @@ In the Linker field, add:
 -l"SDL2_ttf.dll"
 
 Go to: Project->Project Options...->Directories
-Select the tab: Include Directories
-Add: C:\Program Files (x86)\Dev-Cpp\MinGW64\i686-w64-mingw32\include\SDL2
 Select the tab: Library Directories
 Add: C:\Program Files (x86)\Dev-Cpp\MinGW64\i686-w64-mingw32\lib
+Select the tab: Include Directories
+Add: C:\Program Files (x86)\Dev-Cpp\MinGW64\i686-w64-mingw32\include\SDL2
 
 Go to: Tools->Compiler Options...->Directories
 Select the tab: Binaries
